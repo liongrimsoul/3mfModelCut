@@ -1,0 +1,1971 @@
+.modelcut-shell {
+  --ink: #151515;
+  --muted: #6f6b63;
+  --quiet: #9b9589;
+  --line: #ddd6c8;
+  --soft-line: #ebe5da;
+  --paper: #ffffff;
+  --canvas: #f7f3ea;
+  --orange: #ffcf3f;
+  --orange-dark: #f1bd1e;
+  --orange-soft: #fff7d8;
+  --teal: #151515;
+  display: grid;
+  grid-template-columns: 378px minmax(0, 1fr);
+  width: 100%;
+  height: 100dvh;
+  overflow: hidden;
+  color: var(--ink);
+  background: var(--canvas);
+}
+
+.modelcut-sidebar {
+  z-index: 4;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  min-width: 0;
+  min-height: 0;
+  height: 100dvh;
+  background: var(--paper);
+  border-right: 1px solid var(--line);
+  box-shadow: 12px 0 40px rgb(45 37 26 / 3%);
+}
+
+.modelcut-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 74px;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--soft-line);
+}
+
+.modelcut-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: -0.8px;
+  border: 2px solid var(--ink);
+  border-radius: 12px;
+  background: var(--orange);
+  box-shadow: 4px 4px 0 var(--ink);
+}
+
+.modelcut-wordmark {
+  display: flex;
+  align-items: baseline;
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: -0.8px;
+}
+
+.modelcut-wordmark small {
+  margin-left: 5px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 1.7px;
+  text-transform: uppercase;
+}
+
+.modelcut-sidebar-scroll {
+  min-height: 0;
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: scroll;
+  overscroll-behavior-y: contain;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-color: #d9d4cb transparent;
+  scrollbar-width: thin;
+}
+
+.modelcut-upload-section,
+.modelcut-panel,
+.modelcut-privacy-note {
+  margin: 0 20px;
+}
+
+.modelcut-upload-section {
+  padding: 20px 0;
+}
+
+.modelcut-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.modelcut-upload-card {
+  display: grid;
+  justify-items: center;
+  width: 100%;
+  min-height: 126px;
+  padding: 18px 14px;
+  color: var(--ink);
+  font: inherit;
+  background: var(--paper);
+  border: 1px dashed #d9d4ca;
+  border-radius: 14px;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    transform 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.modelcut-upload-card:hover:not(:disabled) {
+  border-color: var(--orange);
+  box-shadow: 0 10px 30px rgb(240 78 35 / 9%);
+  transform: translateY(-1px);
+}
+
+.modelcut-upload-card svg {
+  margin-bottom: 8px;
+  color: var(--orange);
+}
+
+.modelcut-upload-card strong {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.modelcut-upload-card span,
+.modelcut-upload-card small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.modelcut-upload-card small {
+  margin-top: 3px;
+  color: var(--quiet);
+}
+
+.modelcut-panel {
+  padding: 20px 0;
+  border-top: 1px solid var(--soft-line);
+}
+
+.modelcut-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.modelcut-section-heading > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.modelcut-eyebrow {
+  display: grid;
+  place-items: center;
+  width: 25px;
+  height: 25px;
+  color: var(--orange);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  background: var(--orange-soft);
+  border-radius: 8px;
+}
+
+.modelcut-section-heading h2 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 720;
+  letter-spacing: -0.15px;
+}
+
+.modelcut-section-copy {
+  margin: 10px 0 14px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.modelcut-text-button {
+  padding: 3px 0;
+  color: var(--orange);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.modelcut-mode-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  background: #f4f2ee;
+  border-radius: 11px;
+}
+
+.modelcut-mode-switch button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 39px;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 680;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.modelcut-mode-switch button.is-active {
+  color: var(--ink);
+  background: var(--paper);
+  box-shadow:
+    0 1px 2px rgb(24 32 29 / 8%),
+    0 4px 12px rgb(24 32 29 / 4%);
+}
+
+.modelcut-mode-switch button.is-active svg {
+  color: var(--orange);
+}
+
+.modelcut-mode-hint {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 10px;
+  color: var(--quiet);
+  font-size: 11px;
+}
+
+.modelcut-count {
+  display: grid;
+  place-items: center;
+  min-width: 25px;
+  height: 23px;
+  padding: 0 7px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  background: #f4f2ee;
+  border-radius: 999px;
+}
+
+.modelcut-region-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.modelcut-empty-list {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 55px;
+  padding: 0 13px;
+  color: var(--quiet);
+  font-size: 11px;
+  background: #faf9f6;
+  border: 1px solid var(--soft-line);
+  border-radius: 11px;
+}
+
+.modelcut-empty-list p {
+  margin: 0;
+}
+
+.modelcut-empty-dot {
+  width: 9px;
+  height: 9px;
+  border: 1.5px dashed #aaa9a4;
+  border-radius: 50%;
+}
+
+.modelcut-region-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 59px;
+  padding: 9px 9px 9px 11px;
+  background: var(--orange-soft);
+  border: 1px solid #ffd8c9;
+  border-radius: 11px;
+}
+
+.modelcut-swatch {
+  width: 20px;
+  height: 20px;
+  border: 2px solid white;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgb(24 32 29 / 13%);
+}
+
+.modelcut-region-card div {
+  min-width: 0;
+}
+
+.modelcut-region-card strong,
+.modelcut-region-card span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.modelcut-region-card strong {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.modelcut-region-card div span {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.modelcut-region-card button {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  color: var(--muted);
+  background: rgb(255 255 255 / 70%);
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.modelcut-check {
+  color: var(--teal);
+}
+
+.modelcut-validation {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 12px;
+  color: #1d5d58;
+  font-size: 11px;
+  background: #eff8f6;
+  border: 1px solid #d1ece8;
+  border-radius: 11px;
+}
+
+.modelcut-validation div {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 650;
+}
+
+.modelcut-validation p {
+  margin: 2px 0 0;
+  color: #5f7773;
+  line-height: 1.45;
+}
+
+.modelcut-privacy-note {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  padding: 12px;
+  color: #35615d;
+  background: #f3f8f7;
+  border-radius: 11px;
+}
+
+.modelcut-privacy-note strong,
+.modelcut-privacy-note span {
+  display: block;
+}
+
+.modelcut-privacy-note strong {
+  margin-bottom: 2px;
+  font-size: 11px;
+}
+
+.modelcut-privacy-note span {
+  color: #67807c;
+  font-size: 10px;
+}
+
+.modelcut-sidebar-footer {
+  padding: 16px 20px 17px;
+  background: var(--paper);
+  border-top: 1px solid var(--line);
+  box-shadow: 0 -12px 30px rgb(45 37 26 / 3%);
+}
+
+.modelcut-split-button {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  width: 100%;
+  min-height: 49px;
+  padding: 0 13px 0 16px;
+  color: white;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 720;
+  text-align: left;
+  background: var(--orange);
+  border: 0;
+  border-radius: 12px;
+  box-shadow: 0 11px 25px rgb(240 78 35 / 22%);
+  cursor: pointer;
+  transition:
+    background 150ms ease,
+    transform 150ms ease;
+}
+
+.modelcut-split-button:hover:not(:disabled) {
+  background: var(--orange-dark);
+  transform: translateY(-1px);
+}
+
+.modelcut-split-button:disabled {
+  color: #aaa9a4;
+  background: #efede9;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.modelcut-split-button kbd {
+  padding: 4px 7px;
+  color: inherit;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 700;
+  background: rgb(255 255 255 / 16%);
+  border: 1px solid rgb(255 255 255 / 20%);
+  border-radius: 6px;
+}
+
+.modelcut-split-button:disabled kbd {
+  background: #e4e1dc;
+  border-color: #dedbd5;
+}
+
+.modelcut-sidebar-footer p {
+  margin: 8px 0 0;
+  color: var(--quiet);
+  font-size: 10px;
+  text-align: center;
+}
+
+.modelcut-main {
+  display: grid;
+  grid-template-rows: 62px minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+}
+
+.modelcut-topbar {
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 22px;
+  min-width: 0;
+  padding: 0 19px 0 26px;
+  background: rgb(255 254 253 / 88%);
+  border-bottom: 1px solid var(--line);
+  backdrop-filter: blur(14px);
+}
+
+.modelcut-topbar > p {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.modelcut-status-dot {
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  margin-right: 9px;
+  background: #bab9b4;
+  border-radius: 50%;
+}
+
+.modelcut-status-dot.is-busy {
+  background: #f5b54d;
+  box-shadow: 0 0 0 4px rgb(245 181 77 / 14%);
+}
+
+.modelcut-status-dot.is-ready {
+  background: var(--teal);
+  box-shadow: 0 0 0 4px rgb(8 127 121 / 12%);
+}
+
+.modelcut-top-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.modelcut-model-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 11px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 650;
+  background: #f5f3ef;
+  border-radius: 9px;
+  white-space: nowrap;
+}
+
+.modelcut-icon-button {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  color: var(--muted);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.modelcut-download-wrap {
+  position: relative;
+}
+
+.modelcut-download-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 15px;
+  color: white;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  background: var(--orange);
+  border: 0;
+  border-radius: 10px;
+  box-shadow: 0 8px 20px rgb(240 78 35 / 16%);
+  cursor: pointer;
+}
+
+.modelcut-download-button:disabled {
+  color: #aaa9a4;
+  background: #efede9;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.modelcut-download-menu {
+  position: absolute;
+  top: calc(100% + 9px);
+  right: 0;
+  z-index: 12;
+  display: grid;
+  gap: 3px;
+  width: 258px;
+  padding: 7px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  box-shadow: 0 18px 50px rgb(24 32 29 / 15%);
+}
+
+.modelcut-download-menu button {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 11px;
+  padding: 11px;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-radius: 9px;
+  cursor: pointer;
+}
+
+.modelcut-download-menu button:hover {
+  background: var(--orange-soft);
+}
+
+.modelcut-download-menu svg {
+  color: var(--orange);
+}
+
+.modelcut-download-menu strong,
+.modelcut-download-menu small {
+  display: block;
+}
+
+.modelcut-download-menu strong {
+  font-size: 12px;
+}
+
+.modelcut-download-menu small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.modelcut-workspace {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  margin: 9px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 28%, rgb(255 255 255 / 96%), transparent 48%),
+    var(--canvas);
+  border: 1px solid var(--line);
+  border-radius: 15px;
+}
+
+.modelcut-viewport-host,
+.modelcut-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.modelcut-canvas {
+  cursor: grab;
+}
+
+.modelcut-canvas:active {
+  cursor: grabbing;
+}
+
+.modelcut-history-tools {
+  position: absolute;
+  top: 18px;
+  left: 18px;
+  z-index: 2;
+  display: flex;
+  gap: 2px;
+  padding: 4px;
+  background: rgb(255 254 253 / 88%);
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  box-shadow: 0 8px 22px rgb(24 32 29 / 7%);
+  backdrop-filter: blur(12px);
+}
+
+.modelcut-history-tools button {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.modelcut-history-tools button:hover:not(:disabled) {
+  color: var(--orange);
+  background: var(--orange-soft);
+}
+
+.modelcut-history-tools button:disabled {
+  color: #c7c5c0;
+  cursor: not-allowed;
+}
+
+.modelcut-history-tools > span {
+  width: 1px;
+  margin: 7px 3px;
+  background: var(--line);
+}
+
+.modelcut-empty-viewport {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 1;
+  width: min(590px, calc(100% - 80px));
+  text-align: center;
+  transform: translate(-50%, -50%);
+}
+
+.modelcut-empty-icon {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 19px;
+  color: var(--orange);
+  background: var(--orange-soft);
+  border: 1px solid #ffd7c8;
+  border-radius: 20px;
+  box-shadow: 0 12px 34px rgb(240 78 35 / 10%);
+}
+
+.modelcut-kicker {
+  color: var(--orange);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 2.1px;
+  text-transform: uppercase;
+}
+
+.modelcut-empty-viewport h1 {
+  margin: 11px 0 14px;
+  color: var(--ink);
+  font-size: clamp(34px, 4vw, 53px);
+  font-weight: 710;
+  letter-spacing: -2.7px;
+  line-height: 0.98;
+}
+
+.modelcut-empty-viewport > p {
+  max-width: 540px;
+  margin: 0 auto;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.modelcut-empty-actions {
+  display: flex;
+  justify-content: center;
+  gap: 9px;
+  margin-top: 25px;
+}
+
+.modelcut-empty-actions button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 45px;
+  padding: 0 19px;
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  cursor: pointer;
+  box-shadow: 0 8px 22px rgb(24 32 29 / 6%);
+}
+
+.modelcut-empty-actions button:first-child {
+  color: white;
+  background: var(--orange);
+  border-color: var(--orange);
+  box-shadow: 0 11px 26px rgb(240 78 35 / 20%);
+}
+
+.modelcut-format-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  margin-top: 20px;
+  color: var(--quiet);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+}
+
+.modelcut-format-row i {
+  width: 3px;
+  height: 3px;
+  background: #c8c5be;
+  border-radius: 50%;
+}
+
+.modelcut-help-pill {
+  position: absolute;
+  right: 17px;
+  bottom: 16px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 11px;
+  color: var(--muted);
+  font-size: 9px;
+  background: rgb(255 254 253 / 86%);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  backdrop-filter: blur(10px);
+}
+
+.modelcut-progress-card,
+.modelcut-error-card {
+  position: absolute;
+  left: 50%;
+  z-index: 6;
+  display: grid;
+  align-items: center;
+  gap: 12px;
+  width: min(440px, calc(100% - 48px));
+  padding: 13px 15px;
+  background: rgb(255 254 253 / 96%);
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  box-shadow: 0 17px 48px rgb(24 32 29 / 13%);
+  transform: translateX(-50%);
+  backdrop-filter: blur(15px);
+}
+
+.modelcut-progress-card {
+  top: 18px;
+  grid-template-columns: auto 1fr auto;
+}
+
+.modelcut-progress-card > svg {
+  color: var(--orange);
+}
+
+.modelcut-progress-card strong {
+  display: block;
+  margin-bottom: 7px;
+  font-size: 11px;
+}
+
+.modelcut-progress-card > span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.modelcut-progress-track {
+  height: 4px;
+  overflow: hidden;
+  background: #ece8e1;
+  border-radius: 999px;
+}
+
+.modelcut-progress-track span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--orange), #f8a242);
+  border-radius: inherit;
+  transition: width 220ms ease;
+}
+
+.modelcut-error-card {
+  bottom: 58px;
+  grid-template-columns: auto 1fr auto;
+  color: #7c321d;
+  background: rgb(255 248 245 / 97%);
+  border-color: #ffd3c4;
+}
+
+.modelcut-error-card > svg {
+  color: var(--orange);
+}
+
+.modelcut-error-card strong {
+  display: block;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.modelcut-error-card ul {
+  margin: 6px 0 0;
+  padding-left: 16px;
+  color: #8a5b4e;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.modelcut-error-card button {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  color: #8a5b4e;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.modelcut-drop-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  background: rgb(24 32 29 / 34%);
+  backdrop-filter: blur(8px);
+}
+
+.modelcut-drop-overlay > div {
+  display: grid;
+  justify-items: center;
+  width: min(520px, calc(100% - 56px));
+  padding: 48px;
+  color: var(--ink);
+  background: var(--paper);
+  border: 2px dashed var(--orange);
+  border-radius: 24px;
+  box-shadow: 0 30px 90px rgb(24 32 29 / 22%);
+}
+
+.modelcut-drop-overlay svg {
+  margin-bottom: 17px;
+  color: var(--orange);
+}
+
+.modelcut-drop-overlay strong {
+  font-size: 22px;
+  letter-spacing: -0.6px;
+}
+
+.modelcut-drop-overlay span {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.modelcut-webgl-error {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(460px, calc(100% - 60px));
+  text-align: center;
+  transform: translate(-50%, -50%);
+}
+
+.modelcut-webgl-error svg {
+  color: var(--orange);
+}
+
+.modelcut-webgl-error h2 {
+  margin: 13px 0 8px;
+  font-size: 23px;
+  letter-spacing: -0.6px;
+}
+
+.modelcut-webgl-error p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.modelcut-mobile-gate {
+  display: none;
+}
+
+.modelcut-shell button:focus-visible,
+.modelcut-shell [tabindex]:focus-visible {
+  outline: 3px solid rgb(240 78 35 / 27%);
+  outline-offset: 2px;
+}
+
+.is-spinning {
+  animation: modelcut-spin 900ms linear infinite;
+}
+
+@keyframes modelcut-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-height: 780px) {
+  .modelcut-upload-card {
+    min-height: 108px;
+    padding: 13px;
+  }
+
+  .modelcut-upload-section {
+    padding: 14px 0;
+  }
+
+  .modelcut-panel {
+    padding: 15px 0;
+  }
+
+  .modelcut-privacy-note {
+    display: none;
+  }
+}
+
+@media (max-width: 1100px) {
+  .modelcut-shell {
+    grid-template-columns: 318px minmax(0, 1fr);
+  }
+
+  .modelcut-model-pill {
+    display: none;
+  }
+
+  .modelcut-empty-viewport h1 {
+    font-size: 40px;
+  }
+}
+
+@media (max-width: 899px) {
+  .modelcut-shell {
+    display: block;
+    height: 100dvh;
+    background:
+      radial-gradient(circle at 50% 20%, #fff5ed, transparent 48%),
+      var(--canvas);
+  }
+
+  .modelcut-sidebar,
+  .modelcut-main,
+  .modelcut-drop-overlay {
+    display: none;
+  }
+
+  .modelcut-mobile-gate {
+    display: grid;
+    place-items: center;
+    align-content: center;
+    width: min(440px, calc(100% - 48px));
+    height: 100%;
+    margin: 0 auto;
+    text-align: center;
+  }
+
+  .modelcut-mobile-gate .modelcut-mark {
+    margin-bottom: 24px;
+  }
+
+  .modelcut-mobile-gate h1 {
+    margin: 0 0 12px;
+    font-size: 31px;
+    letter-spacing: -1.3px;
+    line-height: 1.04;
+  }
+
+  .modelcut-mobile-gate p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.65;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modelcut-shell *,
+  .modelcut-shell *::before,
+  .modelcut-shell *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ModelCut identity: the warm yellow, black and white system used across
+   Faisal's other products. */
+.modelcut-sidebar {
+  border-right: 2px solid var(--ink);
+  box-shadow: 14px 0 0 rgb(21 21 21 / 4%);
+}
+
+.modelcut-brand {
+  min-height: 82px;
+  padding: 0 22px;
+  border-bottom: 2px solid var(--ink);
+}
+
+.modelcut-upload-section,
+.modelcut-panel,
+.modelcut-privacy-note {
+  margin-right: 18px;
+  margin-left: 18px;
+}
+
+.modelcut-upload-card {
+  min-height: 118px;
+  color: var(--ink);
+  background: var(--orange);
+  border: 2px solid var(--ink);
+  border-radius: 20px;
+  box-shadow: 5px 5px 0 var(--ink);
+}
+
+.modelcut-upload-card:hover:not(:disabled) {
+  border-color: var(--ink);
+  box-shadow: 7px 7px 0 var(--ink);
+}
+
+.modelcut-upload-card svg,
+.modelcut-upload-card span,
+.modelcut-upload-card small {
+  color: var(--ink);
+}
+
+.modelcut-upload-card span {
+  opacity: 0.72;
+}
+
+.modelcut-upload-card small {
+  opacity: 0.5;
+}
+
+.modelcut-panel {
+  padding: 21px 0;
+}
+
+.modelcut-eyebrow {
+  color: var(--ink);
+  background: var(--orange);
+  border: 1px solid var(--ink);
+  border-radius: 8px;
+}
+
+.modelcut-section-heading h2 {
+  font-size: 15px;
+  font-weight: 850;
+  letter-spacing: -0.35px;
+}
+
+.modelcut-text-button {
+  color: var(--ink);
+  font-weight: 800;
+  text-decoration: underline;
+  text-decoration-color: var(--orange);
+  text-decoration-thickness: 3px;
+  text-underline-offset: 3px;
+}
+
+.modelcut-mode-switch {
+  padding: 3px;
+  background: #efebe2;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+}
+
+.modelcut-mode-switch button {
+  min-height: 42px;
+  border-radius: 10px;
+}
+
+.modelcut-mode-switch button.is-active {
+  color: #fff;
+  background: var(--ink);
+  box-shadow: none;
+}
+
+.modelcut-mode-switch button.is-active svg {
+  color: var(--orange);
+}
+
+.modelcut-live-label {
+  padding: 4px 8px;
+  color: var(--ink);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  background: var(--orange);
+  border: 1px solid var(--ink);
+  border-radius: 999px;
+}
+
+.modelcut-setting-label {
+  margin: 16px 0 8px;
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.modelcut-setting-grid,
+.modelcut-connector-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.modelcut-setting-card,
+.modelcut-connector-grid button {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 92px;
+  padding: 10px 8px;
+  color: var(--ink);
+  font: inherit;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  cursor: pointer;
+}
+
+.modelcut-setting-card.is-active,
+.modelcut-connector-grid button.is-active {
+  background: var(--orange-soft);
+  border: 2px solid var(--ink);
+  box-shadow: 3px 3px 0 var(--orange);
+}
+
+.modelcut-setting-card:disabled,
+.modelcut-connector-grid button:disabled {
+  color: #aaa49a;
+  background: #f7f5f0;
+  cursor: not-allowed;
+}
+
+.modelcut-setting-card strong,
+.modelcut-setting-card small,
+.modelcut-connector-grid strong {
+  display: block;
+}
+
+.modelcut-setting-card strong,
+.modelcut-connector-grid strong {
+  margin-top: 7px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.modelcut-setting-card small {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.modelcut-cut-symbol {
+  position: relative;
+  display: block;
+  width: 43px;
+  height: 30px;
+  border-bottom: 3px solid currentColor;
+  border-left: 3px solid currentColor;
+}
+
+.modelcut-cut-symbol::before {
+  position: absolute;
+  right: 4px;
+  bottom: 1px;
+  width: 30px;
+  height: 28px;
+  content: "";
+  border-right: 3px solid currentColor;
+  border-bottom: 3px solid currentColor;
+  transform: skewX(-32deg);
+}
+
+.modelcut-cut-symbol.is-interlock::after {
+  position: absolute;
+  right: -5px;
+  bottom: 10px;
+  width: 12px;
+  height: 8px;
+  content: "";
+  background: var(--orange);
+  border: 2px solid currentColor;
+}
+
+.modelcut-connector-grid button {
+  min-height: 70px;
+}
+
+.modelcut-connector-symbol {
+  position: relative;
+  display: block;
+  width: 48px;
+  height: 24px;
+  border: 2px solid currentColor;
+}
+
+.modelcut-connector-symbol::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 2px;
+  content: "";
+  background: currentColor;
+}
+
+.modelcut-connector-symbol.is-triangle::after {
+  position: absolute;
+  top: 5px;
+  left: calc(50% - 1px);
+  width: 10px;
+  height: 10px;
+  content: "";
+  border-top: 2px solid currentColor;
+  border-right: 2px solid currentColor;
+  transform: rotate(45deg);
+}
+
+.modelcut-connector-symbol.is-cylinder::after {
+  position: absolute;
+  top: 5px;
+  left: calc(50% - 2px);
+  width: 12px;
+  height: 10px;
+  content: "";
+  background: #fff;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+}
+
+.modelcut-connector-symbol.is-rectangle::after {
+  position: absolute;
+  top: 6px;
+  left: calc(50% - 2px);
+  width: 13px;
+  height: 9px;
+  content: "";
+  background: #fff;
+  border: 2px solid currentColor;
+}
+
+.modelcut-toggle-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  cursor: pointer;
+}
+
+.modelcut-toggle-row strong,
+.modelcut-toggle-row small {
+  display: block;
+}
+
+.modelcut-toggle-row strong {
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.modelcut-toggle-row small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.modelcut-toggle-row input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.modelcut-toggle-row i {
+  position: relative;
+  width: 42px;
+  height: 24px;
+  background: #ddd7cd;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  transition: background 150ms ease;
+}
+
+.modelcut-toggle-row i::after {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 14px;
+  height: 14px;
+  content: "";
+  background: var(--ink);
+  border-radius: 50%;
+  transition: transform 150ms ease;
+}
+
+.modelcut-toggle-row input:checked + i {
+  background: var(--orange);
+}
+
+.modelcut-toggle-row input:checked + i::after {
+  transform: translateX(18px);
+}
+
+.modelcut-count,
+.modelcut-empty-list {
+  background: #f3efe7;
+}
+
+.modelcut-region-card {
+  background: var(--orange-soft);
+  border: 1px solid var(--ink);
+  box-shadow: 3px 3px 0 var(--orange);
+}
+
+.modelcut-check {
+  color: var(--ink);
+}
+
+.modelcut-validation {
+  color: var(--ink);
+  background: var(--orange-soft);
+  border: 1px solid var(--ink);
+}
+
+.modelcut-validation p {
+  color: var(--muted);
+}
+
+.modelcut-privacy-note {
+  color: var(--ink);
+  background: var(--orange-soft);
+  border: 1px solid #edcf6b;
+  border-radius: 14px;
+}
+
+.modelcut-privacy-note span {
+  color: var(--muted);
+}
+
+.modelcut-sidebar-footer {
+  border-top: 2px solid var(--ink);
+}
+
+.modelcut-split-button {
+  min-height: 53px;
+  color: var(--orange);
+  background: var(--ink);
+  border: 2px solid var(--ink);
+  border-radius: 14px;
+  box-shadow: 4px 4px 0 var(--orange);
+}
+
+.modelcut-split-button:hover:not(:disabled) {
+  color: var(--ink);
+  background: var(--orange);
+  transform: translateY(-1px);
+}
+
+.modelcut-split-button:disabled {
+  color: #a7a198;
+  background: #ebe7df;
+  border-color: #dcd6cb;
+  box-shadow: none;
+}
+
+.modelcut-main {
+  grid-template-rows: 66px minmax(0, 1fr);
+  background: var(--canvas);
+}
+
+.modelcut-topbar {
+  color: #fff;
+  background: var(--ink);
+  border-bottom: 0;
+}
+
+.modelcut-topbar > p {
+  color: #d4d0c8;
+}
+
+.modelcut-status-dot,
+.modelcut-status-dot.is-busy,
+.modelcut-status-dot.is-ready {
+  background: var(--orange);
+  box-shadow: 0 0 0 4px rgb(255 207 63 / 18%);
+}
+
+.modelcut-model-pill {
+  color: #efebe4;
+  background: #2b2b2b;
+}
+
+.modelcut-icon-button {
+  color: #fff;
+  background: #242424;
+  border-color: #414141;
+}
+
+.modelcut-download-button {
+  color: var(--ink);
+  background: var(--orange);
+  border: 1px solid var(--orange);
+  box-shadow: none;
+}
+
+.modelcut-download-button:disabled {
+  color: #827d74;
+  background: #2b2b2b;
+  border-color: #3d3d3d;
+}
+
+.modelcut-download-menu {
+  border: 2px solid var(--ink);
+  border-radius: 16px;
+  box-shadow: 7px 7px 0 var(--orange);
+}
+
+.modelcut-download-menu button:hover {
+  background: var(--orange-soft);
+}
+
+.modelcut-download-menu svg {
+  color: var(--ink);
+}
+
+.modelcut-workspace {
+  margin: 12px;
+  background: var(--canvas);
+  border: 2px solid var(--ink);
+  border-radius: 24px;
+  box-shadow: 6px 6px 0 var(--orange);
+}
+
+.modelcut-history-tools {
+  background: rgb(255 255 255 / 92%);
+  border: 2px solid var(--ink);
+  border-radius: 13px;
+  box-shadow: 3px 3px 0 var(--orange);
+}
+
+.modelcut-history-tools button:hover:not(:disabled) {
+  color: var(--ink);
+  background: var(--orange);
+}
+
+.modelcut-empty-icon {
+  color: var(--ink);
+  background: var(--orange);
+  border: 2px solid var(--ink);
+  border-radius: 20px;
+  box-shadow: 5px 5px 0 var(--ink);
+}
+
+.modelcut-kicker {
+  color: var(--ink);
+  font-weight: 900;
+  text-decoration: underline;
+  text-decoration-color: var(--orange);
+  text-decoration-thickness: 4px;
+  text-underline-offset: 5px;
+}
+
+.modelcut-empty-viewport h1 {
+  font-weight: 900;
+  letter-spacing: -3.4px;
+}
+
+.modelcut-empty-actions button {
+  border: 2px solid var(--ink);
+  border-radius: 14px;
+  box-shadow: 3px 3px 0 var(--orange);
+}
+
+.modelcut-empty-actions button:first-child {
+  color: var(--orange);
+  background: var(--ink);
+  border-color: var(--ink);
+  box-shadow: 4px 4px 0 var(--orange);
+}
+
+.modelcut-help-pill {
+  color: var(--ink);
+  background: rgb(255 255 255 / 90%);
+  border: 1px solid var(--ink);
+  border-radius: 999px;
+}
+
+.modelcut-progress-card,
+.modelcut-error-card {
+  border: 2px solid var(--ink);
+  border-radius: 15px;
+  box-shadow: 5px 5px 0 var(--orange);
+}
+
+.modelcut-progress-card > svg {
+  color: var(--ink);
+}
+
+.modelcut-progress-track span {
+  background: var(--orange);
+}
+
+.modelcut-error-card {
+  color: var(--ink);
+  background: #fff8dc;
+  border-color: var(--ink);
+}
+
+.modelcut-error-card > svg {
+  color: var(--ink);
+}
+
+.modelcut-drop-overlay {
+  background: rgb(21 21 21 / 46%);
+}
+
+.modelcut-drop-overlay > div {
+  border: 3px solid var(--ink);
+  box-shadow: 8px 8px 0 var(--orange);
+}
+
+.modelcut-drop-overlay svg,
+.modelcut-webgl-error svg {
+  color: var(--ink);
+}
+
+.modelcut-shell button:focus-visible,
+.modelcut-shell [tabindex]:focus-visible,
+.modelcut-toggle-row input:focus-visible + i {
+  outline: 3px solid var(--orange);
+  outline-offset: 3px;
+}
+
+@media (max-width: 1100px) {
+  .modelcut-shell {
+    grid-template-columns: 344px minmax(0, 1fr);
+  }
+}
+
+.modelcut-workflow-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.modelcut-workflow-grid button {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  min-height: 82px;
+  padding: 10px 5px;
+  color: var(--muted);
+  font: inherit;
+  background: #f4f0e8;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  cursor: pointer;
+}
+
+.modelcut-workflow-grid button.is-active {
+  color: var(--ink);
+  background: var(--orange-soft);
+  border: 2px solid var(--ink);
+  box-shadow: 3px 3px 0 var(--orange);
+}
+
+.modelcut-workflow-grid button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.modelcut-workflow-grid svg {
+  margin-bottom: 5px;
+}
+
+.modelcut-workflow-grid strong,
+.modelcut-workflow-grid small {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.modelcut-workflow-grid strong {
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.modelcut-workflow-grid small {
+  margin-top: 2px;
+  color: inherit;
+  font-size: 8px;
+  opacity: 0.7;
+}
+
+.modelcut-region-mode {
+  margin-top: 12px;
+}
+
+.modelcut-setting-note {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  margin-top: 14px;
+  padding: 12px;
+  color: var(--ink);
+  font-size: 10px;
+  line-height: 1.5;
+  background: var(--orange-soft);
+  border: 1px solid #e7c85f;
+  border-radius: 13px;
+}
+
+.modelcut-setting-note strong {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 11px;
+}
+
+.modelcut-cut-controls {
+  margin-top: 14px;
+  padding: 12px;
+  background: #f6f2ea;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+
+.modelcut-cut-controls .modelcut-setting-label:first-child {
+  margin-top: 0;
+}
+
+.modelcut-axis-switch {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5px;
+}
+
+.modelcut-axis-switch button {
+  min-height: 34px;
+  color: var(--muted);
+  font: inherit;
+  font-size: 10px;
+  font-weight: 850;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  cursor: pointer;
+}
+
+.modelcut-axis-switch button.is-active {
+  color: var(--orange);
+  background: var(--ink);
+  border-color: var(--ink);
+}
+
+.modelcut-axis-switch button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.modelcut-range-row {
+  display: grid;
+  gap: 7px;
+  margin-top: 12px;
+  color: var(--ink);
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.modelcut-range-row > span {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.modelcut-range-row output {
+  color: var(--muted);
+  font-weight: 650;
+}
+
+.modelcut-range-row input[type="range"] {
+  width: 100%;
+  height: 5px;
+  accent-color: var(--ink);
+  cursor: ew-resize;
+}
+
+.modelcut-sketch-pad {
+  position: relative;
+  height: 126px;
+  margin-top: 11px;
+  overflow: hidden;
+  touch-action: none;
+  background: #fff;
+  border: 2px solid var(--ink);
+  border-radius: 13px;
+  cursor: crosshair;
+  user-select: none;
+}
+
+.modelcut-sketch-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgb(21 21 21 / 8%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(21 21 21 / 8%) 1px, transparent 1px);
+  background-size: 18px 18px;
+}
+
+.modelcut-sketch-line {
+  position: absolute;
+  z-index: 2;
+  height: 4px;
+  background: var(--orange);
+  border: 1px solid var(--ink);
+  border-radius: 999px;
+  box-shadow: 0 1px 0 var(--ink);
+  transform-origin: left center;
+  pointer-events: none;
+}
+
+.modelcut-sketch-handle {
+  position: absolute;
+  z-index: 3;
+  width: 13px;
+  height: 13px;
+  background: var(--orange);
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.modelcut-sketch-pad small {
+  position: absolute;
+  right: 8px;
+  bottom: 7px;
+  z-index: 1;
+  padding: 3px 6px;
+  color: var(--muted);
+  font-size: 8px;
+  background: rgb(255 255 255 / 78%);
+  border-radius: 5px;
+  pointer-events: none;
+}
+
+.modelcut-connector-settings {
+  margin-top: 10px;
+  padding: 11px;
+  background: #f6f2ea;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+}
+
+.modelcut-connector-settings .modelcut-setting-label:first-child {
+  margin-top: 0;
+}
+
+.modelcut-number-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.modelcut-number-grid label {
+  display: grid;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 750;
+}
+
+.modelcut-number-grid input {
+  width: 100%;
+  min-width: 0;
+  height: 34px;
+  padding: 0 8px;
+  color: var(--ink);
+  font: inherit;
+  font-size: 10px;
+  font-weight: 750;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.modelcut-number-grid input:focus {
+  border-color: var(--ink);
+}
+
+.modelcut-sidebar-scroll {
+  scrollbar-gutter: stable;
+  padding-bottom: 12px;
+}
+
+.modelcut-palette-list {
+  margin-top: 14px;
+}
+
+.modelcut-palette-list > div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  margin-top: 7px;
+}
+
+.modelcut-palette-list button {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 2px 8px;
+  min-width: 0;
+  min-height: 48px;
+  padding: 7px 8px;
+  color: var(--ink);
+  text-align: left;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.modelcut-palette-list button > span {
+  grid-row: 1 / 3;
+  width: 18px;
+  height: 18px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgb(21 21 21 / 20%);
+}
+
+.modelcut-palette-list button strong,
+.modelcut-palette-list button small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.modelcut-palette-list button strong {
+  font-size: 9px;
+}
+
+.modelcut-palette-list button small {
+  color: var(--muted);
+  font-size: 8px;
+}
+
+.modelcut-palette-list button.is-active {
+  background: var(--orange-soft);
+  border-color: var(--orange-dark);
+  box-shadow: inset 0 0 0 1px var(--orange-dark);
+}
+
+.modelcut-palette-list button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.modelcut-connector-note {
+  margin-top: 12px;
+}
+
+.modelcut-validation-actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
