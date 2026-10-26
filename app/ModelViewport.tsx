@@ -6,21 +6,19 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import type {
   MeshData,
   ModelDocument,
+  ModelPiece,
   SelectionMode,
   SplitOperation,
-  SplitResult,
 } from "../lib/model-types";
 
 interface ModelViewportProps {
-  model: ModelDocument | null;
-  split: SplitResult | null;
+  pieces: ModelPiece[];
+  selectedPieceId: string | null;
   selectionMode: SelectionMode;
   selectedIds: Set<number>;
-  onPick: (id: number) => void;
+  onPick: (pieceId: string, regionId: number | null) => void;
   onWebglError: () => void;
   resetSignal: number;
-  splitInPlace: boolean;
-  splitKind: SplitOperation["kind"];
   operationPreview: SplitOperation | null;
 }
 
@@ -62,6 +60,8 @@ function transformedVertex(
 function buildMesh(
   source: MeshData,
   model: ModelDocument,
+  pieceId: string,
+  pieceSelected: boolean,
   selectedIds: Set<number>,
   selectionMode: SelectionMode,
   offsetX = 0,
@@ -115,16 +115,20 @@ function buildMesh(
   mesh.receiveShadow = true;
   mesh.userData.pickingEnabled = pickingEnabled;
   mesh.userData.source = source;
+  mesh.userData.pieceId = pieceId;
   const group = new THREE.Group();
   group.add(mesh);
+  if (pieceSelected) {
+    group.add(new THREE.Box3Helper(new THREE.Box3().setFromObject(mesh), "#FFCF3F"));
+  }
 
   if (faceCount < 60_000) {
     const edges = new THREE.LineSegments(
       new THREE.EdgesGeometry(geometry, 28),
       new THREE.LineBasicMaterial({
-        color: "#1f2724",
+        color: pieceSelected ? "#FFCF3F" : "#1f2724",
         transparent: true,
-        opacity: 0.14,
+        opacity: pieceSelected ? 0.62 : 0.14,
       }),
     );
     group.add(edges);
@@ -270,15 +274,13 @@ function frameContent(runtime: ViewportRuntime): void {
 }
 
 export function ModelViewport({
-  model,
-  split,
+  pieces,
+  selectedPieceId,
   selectionMode,
   selectedIds,
   onPick,
   onWebglError,
   resetSignal,
-  splitInPlace,
-  splitKind,
   operationPreview,
 }: ModelViewportProps) {
   const hostRef = useRef<HTMLDivElement>(null);
@@ -415,12 +417,13 @@ export function ModelViewport({
       const hit = hits[0];
       if (!hit || hit.faceIndex == null) return;
       const source = hit.object.userData.source as MeshData;
+      const pieceId = hit.object.userData.pieceId as string;
       const id =
         selectionModeRef.current === "color"
           ? source.faceColorRegions?.[hit.faceIndex] ??
             source.faceMaterials[hit.faceIndex]
           : source.faceParts[hit.faceIndex];
-      onPickRef.current(id);
+      onPickRef.current(pieceId, id);
     };
     renderer.domElement.addEventListener("pointerdown", handlePointerDown);
     renderer.domElement.addEventListener("pointerup", handlePointerUp);
@@ -444,84 +447,41 @@ export function ModelViewport({
     const runtime = runtimeRef.current;
     if (!runtime) return;
     disposeGroup(runtime.content);
-    if (!model) {
+    if (!pieces.length) {
       runtime.frameKey = "";
       frameContent(runtime);
       return;
     }
-
-    if (split) {
-      const selectedGroup = buildMesh(
-        split.selected,
-        model,
-        new Set(),
+    for (const piece of pieces) {
+      const group = buildMesh(
+        piece.model.mesh,
+        piece.model,
+        piece.id,
+        piece.id === selectedPieceId,
+        piece.id === selectedPieceId ? selectedIds : new Set(),
         selectionMode,
         0,
-        false,
+        true,
       );
-      const remainingGroup = buildMesh(
-        split.remaining,
-        model,
-        new Set(),
-        selectionMode,
-        0,
-        false,
-      );
-      if (!splitInPlace) {
-        const selectedBox = new THREE.Box3().setFromObject(selectedGroup);
-        const remainingBox = new THREE.Box3().setFromObject(remainingGroup);
-        const selectedSize = selectedBox.getSize(new THREE.Vector3());
-        const remainingSize = remainingBox.getSize(new THREE.Vector3());
-        const selectedCenter = selectedBox.getCenter(new THREE.Vector3());
-        const remainingCenter = remainingBox.getCenter(new THREE.Vector3());
-        const gap = Math.max(
-          Math.max(...selectedSize.toArray(), ...remainingSize.toArray()) * 0.08,
-          4,
-        );
-        if (splitKind === "color") {
-          selectedGroup.position.x =
-            remainingBox.min.x - gap - selectedBox.max.x;
-          selectedGroup.position.y =
-            remainingBox.min.y + 0.2 - selectedBox.min.y;
-          selectedGroup.position.z =
-            remainingBox.max.z + gap - selectedBox.min.z;
-        } else {
-          selectedGroup.position.x =
-            remainingBox.min.x - gap - selectedBox.max.x;
-          selectedGroup.position.y = remainingCenter.y - selectedCenter.y;
-        }
+      group.position.set(piece.position.x, piece.position.z, -piece.position.y);
+      if (piece.id === selectedPieceId && operationPreview) {
+        const guide = cutGuide(piece.model, operationPreview);
+        if (guide) group.add(guide);
       }
-      runtime.content.add(selectedGroup, remainingGroup);
-    } else {
-      runtime.content.add(
-        buildMesh(
-          model.mesh,
-          model,
-          selectedIds,
-          selectionMode,
-          0,
-          true,
-        ),
-      );
-      if (operationPreview) {
-        const guide = cutGuide(model, operationPreview);
-        if (guide) runtime.content.add(guide);
-      }
+      runtime.content.add(group);
     }
 
-    const frameKey = `${model.id}:${split?.id ?? "source"}:${splitInPlace ? "in-place" : "apart"}:${splitKind}`;
+    const frameKey = pieces.map((piece) => piece.model.id).join(":");
     if (runtime.frameKey !== frameKey) {
       runtime.frameKey = frameKey;
       frameContent(runtime);
     }
   }, [
-    model,
     operationPreview,
+    pieces,
     selectedIds,
+    selectedPieceId,
     selectionMode,
-    split,
-    splitInPlace,
-    splitKind,
   ]);
 
   useEffect(() => {

@@ -28,6 +28,10 @@ test("server-renders the finished ModelCut Studio editor", async () => {
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
   const html = await response.text();
   assert.match(html, /<title>ModelCut Studio — Private 3D Model Splitter<\/title>/i);
+  const diagnosticsScriptIndex = html.indexOf('id="insert-before-diagnostics"');
+  const appMarkupIndex = html.indexOf('class="modelcut-shell"');
+  assert.notEqual(diagnosticsScriptIndex, -1);
+  assert.ok(diagnosticsScriptIndex < appMarkupIndex);
   assert.match(html, /Separate a model into/);
   assert.match(html, /Upload 3MF or STL/);
   assert.match(html, /Split settings/);

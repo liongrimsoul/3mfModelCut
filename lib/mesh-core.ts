@@ -9,6 +9,7 @@ import type {
   MeshData,
   ModelDocument,
   ModelStats,
+  PieceTransform,
   SplitOperation,
   RegionInfo,
   SelectionState,
@@ -1413,6 +1414,39 @@ export function parseModelFile(
   if (/\.stl$/i.test(fileName)) return parseStl(bytes, fileName);
   if (/\.3mf$/i.test(fileName)) return parse3mf(bytes, fileName);
   throw new Error("Choose a .3mf or .stl model file.");
+}
+
+export function createModelFromMesh(
+  source: ModelDocument,
+  mesh: MeshData,
+  name: string,
+): ModelDocument {
+  const faces: Face[] = [];
+  for (let offset = 0; offset < mesh.indices.length; offset += 3) {
+    faces.push([
+      mesh.indices[offset],
+      mesh.indices[offset + 1],
+      mesh.indices[offset + 2],
+    ]);
+  }
+  return finalizeModel({
+    name,
+    unit: source.unit,
+    unitScaleToMillimeter: source.unitScaleToMillimeter,
+    positions: Array.from(mesh.positions),
+    faces,
+    faceMaterials: Array.from(mesh.faceMaterials),
+    faceVertexMaterials: mesh.faceVertexMaterials
+      ? Array.from(mesh.faceVertexMaterials)
+      : [],
+    materials: source.materials.map((material) => ({
+      name: material.name,
+      color: material.color,
+    })),
+    warnings: source.warnings.filter(
+      (warning) => !warning.startsWith("The source model has "),
+    ),
+  });
 }
 
 function selectedFacesFor(
@@ -3801,6 +3835,127 @@ export function exportStlZip(
       ),
     },
     { level: 0 },
+  );
+}
+
+export interface ExportPiece {
+  id: string;
+  name: string;
+  mesh: MeshData;
+  position: PieceTransform;
+}
+
+function translatedMesh(
+  mesh: MeshData,
+  position: PieceTransform,
+  includeTransform: boolean,
+): MeshData {
+  if (!includeTransform) return mesh;
+  const positions = mesh.positions.slice();
+  for (let index = 0; index < positions.length; index += 3) {
+    positions[index] += position.x;
+    positions[index + 1] += position.y;
+    positions[index + 2] += position.z;
+  }
+  return { ...mesh, positions };
+}
+
+export function exportPieceStl(
+  piece: ExportPiece,
+  includeTransform = false,
+): Uint8Array {
+  return binaryStl(
+    translatedMesh(piece.mesh, piece.position, includeTransform),
+    piece.name,
+  );
+}
+
+export function exportPiecesStlZip(
+  pieces: ExportPiece[],
+  includeTransforms = false,
+): Uint8Array {
+  if (!pieces.length) throw new Error("There are no pieces to export.");
+  const entries: Record<string, Uint8Array> = {};
+  pieces.forEach((piece, index) => {
+    const name = safeBaseName(piece.name);
+    const id = safeBaseName(piece.id);
+    entries[`${String(index + 1).padStart(2, "0")}-${name}-${id}.stl`] =
+      exportPieceStl(piece, includeTransforms);
+  });
+  return zipSync(entries, { level: 0 });
+}
+
+export function exportPieces3mf(
+  source: ModelDocument,
+  pieces: ExportPiece[],
+  includeTransforms = false,
+  sourcePackage?: Uint8Array,
+): Uint8Array {
+  if (!pieces.length) throw new Error("There are no pieces to export.");
+  const materials = [...source.materials];
+  if (!materials.length) {
+    materials.push({
+      id: 0,
+      name: "Default material",
+      color: DEFAULT_COLOR,
+      area: 0,
+      faceCount: 0,
+    });
+  }
+  const baseMaterials = materials
+    .map(
+      (material) =>
+        `<base name="${xmlEscape(material.name)}" displaycolor="${normalizeHex(material.color)}FF"/>`,
+    )
+    .join("");
+  const unit = UNIT_TO_MM[source.unit] ? source.unit : "millimeter";
+  const scale = UNIT_TO_MM[unit] ?? 1;
+  const objects = pieces
+    .map((piece, index) => meshXml(piece.mesh, index + 1, piece.name, scale))
+    .join("");
+  const buildItems = pieces
+    .map((piece, index) => {
+      const transform = includeTransforms
+        ? ` transform="1 0 0 0 1 0 0 0 1 ${piece.position.x / scale} ${piece.position.y / scale} ${piece.position.z / scale}"`
+        : "";
+      return `<item objectid="${index + 1}"${transform}/>`;
+    })
+    .join("");
+  const modelXml =
+    `<?xml version="1.0" encoding="UTF-8"?>` +
+    `<model unit="${unit}" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">` +
+    `<metadata name="Title">${xmlEscape(source.name)} cut pieces</metadata>` +
+    `<metadata name="Application">ModelCut Studio</metadata>` +
+    `<resources><basematerials id="5">${baseMaterials}</basematerials>${objects}</resources>` +
+    `<build>${buildItems}</build></model>`;
+  const contentTypes =
+    `<?xml version="1.0" encoding="UTF-8"?>` +
+    `<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">` +
+    `<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>` +
+    `<Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/>` +
+    `</Types>`;
+  const relationships =
+    `<?xml version="1.0" encoding="UTF-8"?>` +
+    `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">` +
+    `<Relationship Target="/3D/3dmodel.model" Id="rel0" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/>` +
+    `</Relationships>`;
+  let preservedEntries: Record<string, Uint8Array> = {};
+  if (sourcePackage) {
+    try {
+      preservedEntries = unzipSync(sourcePackage);
+    } catch {
+      preservedEntries = {};
+    }
+  }
+  return zipSync(
+    {
+      ...preservedEntries,
+      "[Content_Types].xml":
+        preservedEntries["[Content_Types].xml"] ?? strToU8(contentTypes),
+      "_rels/.rels": strToU8(relationships),
+      "3D/3dmodel.model": strToU8(modelXml),
+    },
+    { level: 6 },
   );
 }
 

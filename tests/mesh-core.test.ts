@@ -1,8 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { strToU8, unzipSync, zipSync } from "fflate";
+import { strFromU8, strToU8, unzipSync, zipSync } from "fflate";
 import {
   createDemoModel,
+  exportPieceStl,
+  exportPieces3mf,
+  exportPiecesStlZip,
   export3mf,
   exportStlZip,
   parse3mf,
@@ -472,6 +475,81 @@ test("exports two STL files and a re-importable colored 3MF", () => {
   assert.equal(roundTrip.stats.partCount, 3);
   assert.equal(roundTrip.stats.faceCount, model.stats.faceCount);
   assert.equal(roundTrip.materials[0].color, "#F04E23");
+});
+
+test("exports final pieces separately or together with opt-in work transforms", () => {
+  const model = createDemoModel();
+  const split = splitByPlane(model, {
+    kind: "plane",
+    axis: "x",
+    position: 0.5,
+    tilt: 0,
+    connector: {
+      method: "none",
+      side: "selected",
+      count: 1,
+      areaPercent: 8,
+      depth: 4,
+      tolerance: 0.2,
+    },
+  });
+  const pieces = [
+    {
+      id: "left",
+      name: "left piece",
+      mesh: split.selected,
+      position: { x: 100, y: 0, z: 0 },
+    },
+    {
+      id: "right",
+      name: "right piece",
+      mesh: split.remaining,
+      position: { x: 0, y: 0, z: 0 },
+    },
+  ];
+
+  const individual = parseStl(exportPieceStl(pieces[0]), "left.stl");
+  const originalMinimum = Math.min(
+    ...Array.from(pieces[0].mesh.positions).filter((_, index) => index % 3 === 0),
+  );
+  const exportedMinimum = Math.min(
+    ...Array.from(individual.mesh.positions).filter((_, index) => index % 3 === 0),
+  );
+  assert.equal(exportedMinimum, originalMinimum);
+  const movedIndividual = parseStl(
+    exportPieceStl(pieces[0], true),
+    "left-moved.stl",
+  );
+  assert.ok(
+    Math.abs(
+      Math.min(
+        ...Array.from(movedIndividual.mesh.positions).filter((_, index) => index % 3 === 0),
+      ) -
+        (originalMinimum + 100),
+    ) < 1e-4,
+  );
+
+  const archive = unzipSync(exportPiecesStlZip(pieces));
+  assert.equal(Object.keys(archive).length, 2);
+  assert.equal(parseStl(archive["01-left-piece-left.stl"], "left.stl").stats.openEdges, 0);
+  assert.equal(parseStl(archive["02-right-piece-right.stl"], "right.stl").stats.openEdges, 0);
+
+  const packageBytes = exportPieces3mf(model, pieces);
+  const modelXml = strFromU8(unzipSync(packageBytes)["3D/3dmodel.model"]);
+  assert.equal((modelXml.match(/<item objectid=/g) ?? []).length, 2);
+  const reparsed = parse3mf(packageBytes, "pieces.3mf");
+  assert.equal(
+    reparsed.stats.faceCount,
+    split.public.selectedFaceCount + split.public.remainingFaceCount,
+  );
+  assert.equal(reparsed.stats.openEdges, 0);
+
+  const movedPackage = exportPieces3mf(model, pieces, true);
+  const movedReparsed = parse3mf(movedPackage, "moved-pieces.3mf");
+  assert.ok(
+    Math.max(...Array.from(movedReparsed.mesh.positions).filter((_, index) => index % 3 === 0)) >
+      Math.max(...Array.from(reparsed.mesh.positions).filter((_, index) => index % 3 === 0)),
+  );
 });
 
 test("keeps source slicer settings alongside color-preserving 3MF geometry", () => {

@@ -39,12 +39,26 @@ import type {
   ConnectorSettings,
   CutAxis,
   ModelDocument,
+  ModelPiece,
+  PieceExportRequest,
+  PieceSplitResult,
+  PieceTransform,
   SelectionMode,
   SplitOperation,
-  SplitResult,
   WorkerRequest,
   WorkerResponse,
 } from "../lib/model-types";
+import {
+  commitSnapshot,
+  createEditorTimeline,
+  createRootPiece,
+  redoSnapshot,
+  replacePieceWithSplit,
+  resetPiecePositions,
+  undoSnapshot,
+  updatePiecePosition,
+} from "../lib/editor-state";
+import type { EditorSnapshot, EditorTimeline } from "../lib/editor-state";
 import { ModelViewport } from "./ModelViewport";
 
 const MAX_FILE_BYTES = 50 * 1024 * 1024;
@@ -67,25 +81,7 @@ interface PendingRequest {
   reject: (error: Error & { details?: string[] }) => void;
 }
 
-interface EditorSnapshot {
-  mode: SelectionMode;
-  ids: number[];
-  split: SplitResult | null;
-}
-
-interface EditorTimeline {
-  past: EditorSnapshot[];
-  present: EditorSnapshot;
-  future: EditorSnapshot[];
-}
-
 type CutMode = SplitOperation["kind"];
-
-const EMPTY_SNAPSHOT: EditorSnapshot = {
-  mode: "color",
-  ids: [],
-  split: null,
-};
 
 function formatNumber(value: number, maximumFractionDigits = 0): string {
   return new Intl.NumberFormat("en-US", {
@@ -191,16 +187,75 @@ function SketchPad({
   );
 }
 
+function PiecePositionControls({
+  piece,
+  disabled,
+  onPositionChange,
+  onReset,
+}: {
+  piece: ModelPiece;
+  disabled: boolean;
+  onPositionChange: (axis: keyof PieceTransform, value: number) => void;
+  onReset: () => void;
+}) {
+  const [draft, setDraft] = useState({
+    x: String(piece.position.x),
+    y: String(piece.position.y),
+    z: String(piece.position.z),
+  });
+
+  const commitAxis = (axis: keyof PieceTransform) => {
+    const value = Number(draft[axis]);
+    if (Number.isFinite(value)) onPositionChange(axis, value);
+    else setDraft((current) => ({ ...current, [axis]: String(piece.position[axis]) }));
+  };
+
+  return (
+    <div className="modelcut-piece-transform">
+      <p className="modelcut-setting-label">Position · selected piece</p>
+      <div className="modelcut-number-grid">
+        {(["x", "y", "z"] as const).map((axis) => (
+          <label key={axis}>
+            {axis.toUpperCase()} mm
+            <input
+              type="number"
+              step="0.1"
+              value={draft[axis]}
+              disabled={disabled}
+              onChange={(event) =>
+                setDraft((current) => ({
+                  ...current,
+                  [axis]: event.target.value,
+                }))
+              }
+              onBlur={() => commitAxis(axis)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") event.currentTarget.blur();
+              }}
+            />
+          </label>
+        ))}
+      </div>
+      <button
+        className="modelcut-text-button"
+        type="button"
+        disabled={disabled}
+        onClick={onReset}
+      >
+        Restore original positions
+      </button>
+    </div>
+  );
+}
+
 export function ModelCutStudio() {
   const workerRef = useRef<Worker | null>(null);
   const pendingRef = useRef(new Map<string, PendingRequest>());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [model, setModel] = useState<ModelDocument | null>(null);
-  const [timeline, setTimeline] = useState<EditorTimeline>({
-    past: [],
-    present: EMPTY_SNAPSHOT,
-    future: [],
-  });
+  const [timeline, setTimeline] = useState<EditorTimeline>(() =>
+    createEditorTimeline(),
+  );
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(0);
   const [progressMessage, setProgressMessage] = useState("");
@@ -209,6 +264,8 @@ export function ModelCutStudio() {
     details?: string[];
   } | null>(null);
   const [downloadOpen, setDownloadOpen] = useState(false);
+  const [includeTransformsInExport, setIncludeTransformsInExport] =
+    useState(false);
   const [dragging, setDragging] = useState(false);
   const [webglFailed, setWebglFailed] = useState(false);
   const [resetSignal, setResetSignal] = useState(0);
@@ -295,14 +352,21 @@ export function ModelCutStudio() {
     () => new Set(timeline.present.ids),
     [timeline.present.ids],
   );
+  const pieces = timeline.present.pieces;
+  const selectedPiece =
+    pieces.find((piece) => piece.id === timeline.present.selectedPieceId) ?? null;
+  const activeModel = selectedPiece?.model ?? model;
+  const hasSplit = pieces.length > 1;
+  const validatedPieces = pieces.filter((piece) => piece.validation?.ok);
+  const allPiecesValidated = hasSplit && validatedPieces.length === pieces.length;
+  const capFaceCount = pieces.reduce((total, piece) => total + piece.capCount, 0);
   const mode = timeline.present.mode;
-  const splitResult = timeline.present.split;
   const regions = useMemo(() => {
-    if (!model) return [];
+    if (!activeModel) return [];
     return mode === "color"
-      ? model.colorRegions.filter((region) => region.faceCount > 0)
-      : model.parts;
-  }, [mode, model]);
+      ? activeModel.colorRegions.filter((region) => region.faceCount > 0)
+      : activeModel.parts;
+  }, [activeModel, mode]);
   const selectedRegions = useMemo(
     () => regions.filter((region) => selectedIds.has(region.id)),
     [regions, selectedIds],
@@ -368,79 +432,58 @@ export function ModelCutStudio() {
     sketchViewAxis,
   ]);
   const canSplit =
-    Boolean(model) &&
+    Boolean(selectedPiece) &&
     !busy &&
-    !splitResult &&
     (cutMode !== "color" || selectedIds.size > 0);
 
   const commit = useCallback((next: EditorSnapshot) => {
-    setTimeline((current) => ({
-      past: [...current.past.slice(-39), current.present],
-      present: next,
-      future: [],
-    }));
+    setTimeline((current) => commitSnapshot(current, next));
   }, []);
 
   const undo = useCallback(() => {
-    setTimeline((current) => {
-      if (!current.past.length) return current;
-      const present = current.past[current.past.length - 1];
-      return {
-        past: current.past.slice(0, -1),
-        present,
-        future: [current.present, ...current.future].slice(0, 40),
-      };
-    });
+    setTimeline(undoSnapshot);
     setDownloadOpen(false);
   }, []);
 
   const redo = useCallback(() => {
-    setTimeline((current) => {
-      if (!current.future.length) return current;
-      const [present, ...future] = current.future;
-      return {
-        past: [...current.past.slice(-39), current.present],
-        present,
-        future,
-      };
-    });
+    setTimeline(redoSnapshot);
   }, []);
 
   const toggleSelection = useCallback(
     (id: number) => {
-      if (!model || busy || splitResult || cutMode !== "color") return;
+      if (!selectedPiece || busy || cutMode !== "color") return;
       const next = new Set(selectedIds);
       if (next.has(id)) next.delete(id);
       else next.add(id);
-      commit({ mode, ids: [...next], split: null });
+      commit({ ...timeline.present, mode, ids: [...next] });
       setError(null);
     },
-    [busy, commit, cutMode, mode, model, selectedIds, splitResult],
+    [busy, commit, cutMode, mode, selectedIds, selectedPiece, timeline.present],
   );
 
   const changeMode = useCallback(
     (nextMode: SelectionMode) => {
       if (nextMode === mode || busy) return;
-      commit({ mode: nextMode, ids: [], split: null });
+      commit({ ...timeline.present, mode: nextMode, ids: [] });
       setError(null);
     },
-    [busy, commit, mode],
+    [busy, commit, mode, timeline.present],
   );
 
   const changeCutMode = useCallback(
     (nextMode: CutMode) => {
-      if (nextMode === cutMode || busy || splitResult) return;
+      if (nextMode === cutMode || busy) return;
       setCutMode(nextMode);
       setError(null);
     },
-    [busy, cutMode, splitResult],
+    [busy, cutMode],
   );
 
   const clearSelection = useCallback(() => {
-    if (!selectedIds.size && !splitResult) return;
-    commit({ mode, ids: [], split: null });
+    if (!selectedIds.size) return;
+    commit({ ...timeline.present, mode, ids: [] });
     setError(null);
-  }, [commit, mode, selectedIds.size, splitResult]);
+  }, [commit, mode, selectedIds.size, timeline.present]);
 
   const loadModel = useCallback(
     async (file: File) => {
@@ -464,8 +507,9 @@ export function ModelCutStudio() {
           { type: "parse", fileName: file.name, bytes },
           [bytes],
         );
-        setModel(response.result as ModelDocument);
-        setTimeline({ past: [], present: EMPTY_SNAPSHOT, future: [] });
+        const loadedModel = response.result as ModelDocument;
+        setModel(loadedModel);
+        setTimeline(createEditorTimeline([createRootPiece(loadedModel)]));
         setResetSignal((value) => value + 1);
         if (file.size > WARNING_FILE_BYTES) {
           setError({
@@ -492,8 +536,9 @@ export function ModelCutStudio() {
     setProgressMessage("Building the original demo");
     try {
       const response = await requestWorker({ type: "demo" });
-      setModel(response.result as ModelDocument);
-      setTimeline({ past: [], present: EMPTY_SNAPSHOT, future: [] });
+      const loadedModel = response.result as ModelDocument;
+      setModel(loadedModel);
+      setTimeline(createEditorTimeline([createRootPiece(loadedModel)]));
       setResetSignal((value) => value + 1);
     } catch (caught) {
       setError({ message: (caught as Error).message });
@@ -505,7 +550,7 @@ export function ModelCutStudio() {
   }, [requestWorker]);
 
   const createSplit = useCallback(async () => {
-    if (!model || !canSplit) return;
+    if (!selectedPiece || !canSplit) return;
     setError(null);
     setBusy(true);
     setProgress(0.05);
@@ -513,13 +558,21 @@ export function ModelCutStudio() {
     try {
       const response = await requestWorker({
         type: "split",
-        modelId: model.id,
+        modelId: selectedPiece.model.id,
         operation: splitOperation,
       });
+      const split = response.result as PieceSplitResult;
+      const nextPieces = replacePieceWithSplit(
+        timeline.present.pieces,
+        selectedPiece.id,
+        split,
+        !splitInPlace,
+      );
       commit({
-        mode,
-        ids: [...selectedIds],
-        split: response.result as SplitResult,
+        ...timeline.present,
+        pieces: nextPieces,
+        selectedPieceId: `piece-${split.id}-selected`,
+        ids: [],
       });
     } catch (caught) {
       const typed = caught as Error & { details?: string[] };
@@ -532,30 +585,66 @@ export function ModelCutStudio() {
   }, [
     canSplit,
     commit,
-    mode,
-    model,
     requestWorker,
-    selectedIds,
+    selectedPiece,
+    splitInPlace,
     splitOperation,
+    timeline.present,
   ]);
 
   const exportFile = useCallback(
-    async (type: "export-3mf" | "export-stl-zip") => {
-      if (!model || !splitResult || busy) return;
+    async (
+      type: "export-piece-stl" | "export-pieces-3mf" | "export-pieces-stl-zip",
+      onlyPiece?: ModelPiece,
+    ) => {
+      if (
+        !model ||
+        !hasSplit ||
+        !pieces.length ||
+        busy ||
+        (type === "export-piece-stl" && !onlyPiece)
+      )
+        return;
       setDownloadOpen(false);
       setError(null);
       setBusy(true);
       setProgress(0.05);
       setProgressMessage("Preparing your download");
       try {
-        const response = await requestWorker({
-          type,
-          modelId: model.id,
-          splitId: splitResult.id,
-        });
+        const pieceRequests: PieceExportRequest[] = pieces.map((piece) => ({
+          modelId: piece.model.id,
+          name: piece.model.name,
+          position: piece.position,
+        }));
+        const request: RequestWithoutId =
+          type === "export-piece-stl" && onlyPiece
+            ? {
+                type,
+                modelId: onlyPiece.model.id,
+                piece: {
+                  modelId: onlyPiece.model.id,
+                  name: onlyPiece.model.name,
+                  position: onlyPiece.position,
+                },
+                includeTransforms: includeTransformsInExport,
+              }
+            : type === "export-pieces-3mf"
+              ? {
+                  type,
+                  modelId: model.id,
+                  pieces: pieceRequests,
+                  includeTransforms: includeTransformsInExport,
+                }
+              : {
+                  type: "export-pieces-stl-zip",
+                  modelId: model.id,
+                  pieces: pieceRequests,
+                  includeTransforms: includeTransformsInExport,
+                };
+        const response = await requestWorker(request);
         downloadBlob(
           response.result as ArrayBuffer,
-          response.fileName ?? `modelcut-download.${type === "export-3mf" ? "3mf" : "zip"}`,
+          response.fileName ?? "modelcut-pieces.zip",
           response.mimeType ?? "application/octet-stream",
         );
       } catch (caught) {
@@ -566,7 +655,7 @@ export function ModelCutStudio() {
         setProgressMessage("");
       }
     },
-    [busy, model, requestWorker, splitResult],
+    [busy, hasSplit, includeTransformsInExport, model, pieces, requestWorker],
   );
 
   useEffect(() => {
@@ -617,11 +706,48 @@ export function ModelCutStudio() {
     if (file) void loadModel(file);
   };
 
+  const selectPiece = useCallback((pieceId: string) => {
+    setTimeline((current) => ({
+      ...current,
+      present: {
+        ...current.present,
+        selectedPieceId: pieceId,
+        ids: [],
+      },
+    }));
+  }, []);
+
+  const updateSelectedPosition = useCallback(
+    (axis: keyof PieceTransform, value: number) => {
+      if (!selectedPiece || !Number.isFinite(value)) return;
+      const position = { ...selectedPiece.position, [axis]: value };
+      const nextPieces = updatePiecePosition(pieces, selectedPiece.id, position);
+      commit({ ...timeline.present, pieces: nextPieces });
+    },
+    [commit, pieces, selectedPiece, timeline.present],
+  );
+
+  const restorePiecePositions = useCallback(() => {
+    if (
+      !pieces.some(
+        ({ homePosition, position }) =>
+          position.x !== homePosition.x ||
+          position.y !== homePosition.y ||
+          position.z !== homePosition.z,
+      )
+    )
+      return;
+    commit({
+      ...timeline.present,
+      pieces: resetPiecePositions(pieces),
+    });
+  }, [commit, pieces, timeline.present]);
+
   const statusText = busy
     ? progressMessage || "Working locally"
-    : splitResult
-      ? "Split validated — both pieces are ready to download."
-      : model
+    : allPiecesValidated
+      ? `${pieces.length} closed pieces are ready to download.`
+      : activeModel
         ? cutMode === "color"
           ? `${mode === "color" ? "Color" : "Part"} mode — click the model to select. Press Space to split.`
           : cutMode === "plane"
@@ -674,6 +800,47 @@ export function ModelCutStudio() {
             </button>
           </section>
 
+          {hasSplit && (
+            <section className="modelcut-panel">
+              <div className="modelcut-section-heading">
+                <div>
+                  <span className="modelcut-eyebrow">Pieces</span>
+                  <h2>Pieces</h2>
+                </div>
+                <span className="modelcut-count">{pieces.length}</span>
+              </div>
+              <div className="modelcut-piece-list">
+                {pieces.map((piece, index) => (
+                  <button
+                    key={piece.id}
+                    type="button"
+                    className={
+                      piece.id === selectedPiece?.id ? "is-active" : ""
+                    }
+                    aria-pressed={piece.id === selectedPiece?.id}
+                    disabled={busy}
+                    onClick={() => selectPiece(piece.id)}
+                  >
+                    <strong>Piece {index + 1}</strong>
+                    <small>
+                      {formatNumber(piece.model.stats.faceCount)} faces
+                      {piece.validation?.ok ? " · Closed" : ""}
+                    </small>
+                  </button>
+                ))}
+              </div>
+              {selectedPiece && (
+                <PiecePositionControls
+                  key={`${selectedPiece.id}:${selectedPiece.position.x}:${selectedPiece.position.y}:${selectedPiece.position.z}`}
+                  piece={selectedPiece}
+                  disabled={busy}
+                  onPositionChange={updateSelectedPosition}
+                  onReset={restorePiecePositions}
+                />
+              )}
+            </section>
+          )}
+
           <section className="modelcut-panel">
             <div className="modelcut-section-heading">
               <div>
@@ -699,7 +866,7 @@ export function ModelCutStudio() {
                 className={cutMode === "color" ? "is-active" : ""}
                 onClick={() => changeCutMode("color")}
                 aria-pressed={cutMode === "color"}
-                disabled={busy || Boolean(splitResult)}
+                disabled={busy}
               >
                 <Palette size={18} />
                 <strong>Color</strong>
@@ -710,7 +877,7 @@ export function ModelCutStudio() {
                 className={cutMode === "plane" ? "is-active" : ""}
                 onClick={() => changeCutMode("plane")}
                 aria-pressed={cutMode === "plane"}
-                disabled={busy || Boolean(splitResult)}
+                disabled={busy}
               >
                 <Scissors size={18} />
                 <strong>Plane</strong>
@@ -721,7 +888,7 @@ export function ModelCutStudio() {
                 className={cutMode === "sketch" ? "is-active" : ""}
                 onClick={() => changeCutMode("sketch")}
                 aria-pressed={cutMode === "sketch"}
-                disabled={busy || Boolean(splitResult)}
+                disabled={busy}
               >
                 <PenLine size={18} />
                 <strong>Sketch</strong>
@@ -777,7 +944,7 @@ export function ModelCutStudio() {
                           }
                           aria-pressed={selectedIds.has(region.id)}
                           aria-label={`${selectedIds.has(region.id) ? "Remove" : "Select"} ${region.name}`}
-                          disabled={busy || Boolean(splitResult)}
+                          disabled={busy}
                           onClick={() => toggleSelection(region.id)}
                         >
                           <span
@@ -817,7 +984,7 @@ export function ModelCutStudio() {
                     }`}
                     type="button"
                     aria-pressed={colorCutMethod === "patch"}
-                    disabled={busy || Boolean(splitResult)}
+                    disabled={busy}
                     onClick={() => setColorCutMethod("patch")}
                   >
                     <span className="modelcut-cut-symbol" aria-hidden="true" />
@@ -830,7 +997,7 @@ export function ModelCutStudio() {
                     }`}
                     type="button"
                     aria-pressed={colorCutMethod === "interlocking"}
-                    disabled={busy || Boolean(splitResult)}
+                    disabled={busy}
                     onClick={() => setColorCutMethod("interlocking")}
                   >
                     <span
@@ -861,7 +1028,7 @@ export function ModelCutStudio() {
                       type="button"
                       className={planeAxis === axis ? "is-active" : ""}
                       aria-pressed={planeAxis === axis}
-                      disabled={busy || Boolean(splitResult)}
+                      disabled={busy}
                       onClick={() => setPlaneAxis(axis)}
                     >
                       {axis.toUpperCase()}
@@ -877,7 +1044,7 @@ export function ModelCutStudio() {
                     min="1"
                     max="99"
                     value={Math.round(planePosition * 100)}
-                    disabled={busy || Boolean(splitResult)}
+                    disabled={busy}
                     onChange={(event) =>
                       setPlanePosition(Number(event.target.value) / 100)
                     }
@@ -892,7 +1059,7 @@ export function ModelCutStudio() {
                     min="-45"
                     max="45"
                     value={planeTilt}
-                    disabled={busy || Boolean(splitResult)}
+                    disabled={busy}
                     onChange={(event) => setPlaneTilt(Number(event.target.value))}
                   />
                 </label>
@@ -908,7 +1075,7 @@ export function ModelCutStudio() {
                       type="button"
                       className={sketchViewAxis === axis ? "is-active" : ""}
                       aria-pressed={sketchViewAxis === axis}
-                      disabled={busy || Boolean(splitResult)}
+                      disabled={busy}
                       onClick={() => setSketchViewAxis(axis)}
                     >
                       {axis.toUpperCase()}
@@ -919,7 +1086,7 @@ export function ModelCutStudio() {
                   start={sketchStart}
                   end={sketchEnd}
                   onChange={(start, end) => {
-                    if (busy || splitResult) return;
+                    if (busy) return;
                     setSketchStart(start);
                     setSketchEnd(end);
                   }}
@@ -933,7 +1100,7 @@ export function ModelCutStudio() {
                 className={connectorMethod === "none" ? "is-active" : ""}
                 type="button"
                 aria-pressed={connectorMethod === "none"}
-                disabled={busy || Boolean(splitResult)}
+                disabled={busy}
                 onClick={() => setConnectorMethod("none")}
               >
                 <span className="modelcut-connector-symbol is-none" aria-hidden="true" />
@@ -943,7 +1110,7 @@ export function ModelCutStudio() {
                 className={connectorMethod === "triangle" ? "is-active" : ""}
                 type="button"
                 aria-pressed={connectorMethod === "triangle"}
-                disabled={busy || Boolean(splitResult)}
+                disabled={busy}
                 onClick={() => setConnectorMethod("triangle")}
               >
                 <span className="modelcut-connector-symbol is-triangle" aria-hidden="true" />
@@ -953,7 +1120,7 @@ export function ModelCutStudio() {
                 className={connectorMethod === "cylinder" ? "is-active" : ""}
                 type="button"
                 aria-pressed={connectorMethod === "cylinder"}
-                disabled={busy || Boolean(splitResult)}
+                disabled={busy}
                 onClick={() => setConnectorMethod("cylinder")}
               >
                 <span className="modelcut-connector-symbol is-cylinder" aria-hidden="true" />
@@ -963,7 +1130,7 @@ export function ModelCutStudio() {
                 className={connectorMethod === "rectangle" ? "is-active" : ""}
                 type="button"
                 aria-pressed={connectorMethod === "rectangle"}
-                disabled={busy || Boolean(splitResult)}
+                disabled={busy}
                 onClick={() => setConnectorMethod("rectangle")}
               >
                 <span className="modelcut-connector-symbol is-rectangle" aria-hidden="true" />
@@ -978,7 +1145,7 @@ export function ModelCutStudio() {
                     type="button"
                     className={connectorSide === "selected" ? "is-active" : ""}
                     aria-pressed={connectorSide === "selected"}
-                    disabled={busy || Boolean(splitResult)}
+                    disabled={busy}
                     onClick={() => setConnectorSide("selected")}
                   >
                     Selected part
@@ -987,7 +1154,7 @@ export function ModelCutStudio() {
                     type="button"
                     className={connectorSide === "remaining" ? "is-active" : ""}
                     aria-pressed={connectorSide === "remaining"}
-                    disabled={busy || Boolean(splitResult)}
+                    disabled={busy}
                     onClick={() => setConnectorSide("remaining")}
                   >
                     Body
@@ -1001,7 +1168,7 @@ export function ModelCutStudio() {
                       min="1"
                       max="4"
                       value={connectorCount}
-                      disabled={busy || Boolean(splitResult)}
+                      disabled={busy}
                       onChange={(event) =>
                         setConnectorCount(
                           Math.max(1, Math.min(4, Number(event.target.value))),
@@ -1016,7 +1183,7 @@ export function ModelCutStudio() {
                       min="1"
                       max="25"
                       value={connectorArea}
-                      disabled={busy || Boolean(splitResult)}
+                      disabled={busy}
                       onChange={(event) =>
                         setConnectorArea(
                           Math.max(1, Math.min(25, Number(event.target.value))),
@@ -1032,7 +1199,7 @@ export function ModelCutStudio() {
                       max="30"
                       step="0.2"
                       value={connectorDepth}
-                      disabled={busy || Boolean(splitResult)}
+                      disabled={busy}
                       onChange={(event) =>
                         setConnectorDepth(
                           Math.max(0.8, Math.min(30, Number(event.target.value))),
@@ -1048,7 +1215,7 @@ export function ModelCutStudio() {
                       max="1"
                       step="0.05"
                       value={connectorTolerance}
-                      disabled={busy || Boolean(splitResult)}
+                      disabled={busy}
                       onChange={(event) =>
                         setConnectorTolerance(
                           Math.max(0, Math.min(1, Number(event.target.value))),
@@ -1128,7 +1295,7 @@ export function ModelCutStudio() {
                 </span>
                 <h2>Validate split</h2>
               </div>
-              {splitResult && (
+              {hasSplit && (
                 <div className="modelcut-validation-actions">
                   <Check className="modelcut-check" size={18} />
                   <button
@@ -1136,24 +1303,27 @@ export function ModelCutStudio() {
                     className="modelcut-text-button"
                     onClick={clearSelection}
                   >
-                    New cut
+                    Clear selection
                   </button>
                 </div>
               )}
             </div>
-            {splitResult ? (
+            {hasSplit ? (
               <div className="modelcut-validation">
-                <div>
-                  <Check size={15} />
-                  Selected piece is closed
-                </div>
-                <div>
-                  <Check size={15} />
-                  Remaining piece is closed
-                </div>
+                {pieces.map((piece, index) => (
+                  <div key={piece.id}>
+                    {piece.validation?.ok ? <Check size={15} /> : <Info size={15} />}
+                    Piece {index + 1}: {piece.validation?.ok ? "closed" : "not validated"}
+                  </div>
+                ))}
                 <p>
-                  {formatNumber(splitResult.capCount)} cap faces added ·{" "}
-                  {formatNumber(splitResult.selectedFaceCount)} selected faces
+                  {formatNumber(capFaceCount)} cap faces added ·{" "}
+                  {formatNumber(
+                    pieces.reduce(
+                      (total, piece) => total + piece.model.stats.faceCount,
+                      0,
+                    ),
+                  )} total faces
                 </p>
               </div>
             ) : (
@@ -1182,12 +1352,10 @@ export function ModelCutStudio() {
           >
             {busy ? (
               <LoaderCircle className="is-spinning" size={19} />
-            ) : splitResult ? (
-              <Check size={19} />
             ) : (
               <Split size={19} />
             )}
-            {splitResult ? "Split ready" : "Split model"}
+            {selectedPiece ? "Split selected piece" : "Split model"}
             <kbd>Space</kbd>
           </button>
           <p>
@@ -1206,7 +1374,7 @@ export function ModelCutStudio() {
         <header className="modelcut-topbar">
           <p>
             <span
-              className={`modelcut-status-dot ${busy ? "is-busy" : splitResult ? "is-ready" : ""}`}
+              className={`modelcut-status-dot ${busy ? "is-busy" : allPiecesValidated ? "is-ready" : ""}`}
             />
             {statusText}
           </p>
@@ -1214,7 +1382,7 @@ export function ModelCutStudio() {
             {model && (
               <span className="modelcut-model-pill">
                 <Box size={14} />
-                {formatNumber(model.stats.faceCount)} faces
+                {formatNumber(activeModel?.stats.faceCount ?? model.stats.faceCount)} faces
               </span>
             )}
             <button
@@ -1229,7 +1397,7 @@ export function ModelCutStudio() {
               <button
                 type="button"
                 className="modelcut-download-button"
-                disabled={!splitResult || busy}
+                disabled={!hasSplit || busy}
                 onClick={() => setDownloadOpen((open) => !open)}
                 aria-expanded={downloadOpen}
               >
@@ -1239,7 +1407,7 @@ export function ModelCutStudio() {
               </button>
               {downloadOpen && (
                 <div className="modelcut-download-menu">
-                  <button type="button" onClick={() => void exportFile("export-3mf")}>
+                  <button type="button" onClick={() => void exportFile("export-pieces-3mf")}>
                     <Box size={18} />
                     <span>
                       <strong>Color 3MF</strong>
@@ -1248,7 +1416,7 @@ export function ModelCutStudio() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => void exportFile("export-stl-zip")}
+                    onClick={() => void exportFile("export-pieces-stl-zip")}
                   >
                     <FileArchive size={18} />
                     <span>
@@ -1256,6 +1424,30 @@ export function ModelCutStudio() {
                       <small>Selected and remaining files</small>
                     </span>
                   </button>
+                  {pieces.map((piece, index) => (
+                    <button
+                      key={`download-${piece.id}`}
+                      type="button"
+                      disabled={busy}
+                      onClick={() => void exportFile("export-piece-stl", piece)}
+                    >
+                      <Download size={18} />
+                      <span>
+                        <strong>Piece {index + 1} STL</strong>
+                        <small>{formatNumber(piece.model.stats.faceCount)} faces</small>
+                      </span>
+                    </button>
+                  ))}
+                  <label className="modelcut-export-transform">
+                    <input
+                      type="checkbox"
+                      checked={includeTransformsInExport}
+                      onChange={(event) =>
+                        setIncludeTransformsInExport(event.target.checked)
+                      }
+                    />
+                    Include working positions in exports
+                  </label>
                 </div>
               )}
             </div>
@@ -1286,7 +1478,7 @@ export function ModelCutStudio() {
             <button
               type="button"
               onClick={() => setResetSignal((value) => value + 1)}
-              disabled={!model}
+              disabled={!pieces.length}
               aria-label="Reset camera"
               title="Reset camera"
             >
@@ -1295,16 +1487,22 @@ export function ModelCutStudio() {
           </div>
 
           <ModelViewport
-            model={model}
-            split={splitResult}
+            pieces={pieces}
+            selectedPieceId={selectedPiece?.id ?? null}
             selectionMode={mode}
             selectedIds={selectedIds}
-            onPick={toggleSelection}
+            onPick={(pieceId, regionId) => {
+              if (pieceId !== selectedPiece?.id) {
+                selectPiece(pieceId);
+                return;
+              }
+              if (regionId != null && cutMode === "color") {
+                toggleSelection(regionId);
+              }
+            }}
             onWebglError={() => setWebglFailed(true)}
             resetSignal={resetSignal}
-            splitInPlace={splitInPlace}
-            splitKind={splitOperation.kind}
-            operationPreview={splitResult ? null : splitOperation}
+            operationPreview={selectedPiece ? splitOperation : null}
           />
 
           {!model && !busy && !webglFailed && (

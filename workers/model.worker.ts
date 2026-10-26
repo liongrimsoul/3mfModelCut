@@ -2,8 +2,12 @@
 
 import {
   createDemoModel,
+  createModelFromMesh,
   downloadBaseName,
   export3mf,
+  exportPieceStl,
+  exportPieces3mf,
+  exportPiecesStlZip,
   exportStlZip,
   parseModelFile,
   splitWithOperation,
@@ -13,7 +17,8 @@ import {
 import type {
   MeshData,
   ModelDocument,
-  SplitResult,
+  PieceExportRequest,
+  PieceSplitResult,
   WorkerRequest,
   WorkerResponse,
 } from "../lib/model-types";
@@ -42,24 +47,6 @@ function cloneModel(model: ModelDocument): ModelDocument {
     parts: model.parts.map((part) => ({ ...part })),
     stats: { ...model.stats },
     warnings: [...model.warnings],
-  };
-}
-
-function cloneSplit(split: SplitResult): SplitResult {
-  return {
-    ...split,
-    selected: cloneMesh(split.selected),
-    remaining: cloneMesh(split.remaining),
-    selectedValidation: {
-      ...split.selectedValidation,
-      issues: [...split.selectedValidation.issues],
-      warnings: [...split.selectedValidation.warnings],
-    },
-    remainingValidation: {
-      ...split.remainingValidation,
-      issues: [...split.remainingValidation.issues],
-      warnings: [...split.remainingValidation.warnings],
-    },
   };
 }
 
@@ -93,22 +80,32 @@ function transferableBuffer(bytes: Uint8Array): ArrayBuffer {
   return buffer;
 }
 
+function resolveExportPieces(
+  requested: PieceExportRequest[],
+): Array<{
+  id: string;
+  name: string;
+  mesh: MeshData;
+  position: PieceExportRequest["position"];
+}> {
+  if (!requested.length) throw new Error("There are no pieces to export.");
+  return requested.map((piece) => {
+    const model = models.get(piece.modelId);
+    if (!model) throw new Error(`Piece ${piece.name} is no longer available.`);
+    return {
+      id: piece.modelId,
+      name: piece.name,
+      mesh: model.mesh,
+      position: piece.position,
+    };
+  });
+}
+
 function modelResult(id: string, model: ModelDocument): void {
   const result = cloneModel(model);
   post(
     { id, type: "result", result },
     buffersForMesh(result.mesh),
-  );
-}
-
-function splitResult(id: string, split: SplitResult): void {
-  const result = cloneSplit(split);
-  post(
-    { id, type: "result", result },
-    [
-      ...buffersForMesh(result.selected),
-      ...buffersForMesh(result.remaining),
-    ],
   );
 }
 
@@ -164,8 +161,102 @@ self.addEventListener("message", (event: MessageEvent<WorkerRequest>) => {
         const split = splitWithOperation(model, request.operation);
         progress(request.id, 0.82, "Validating both printable pieces");
         splits.set(split.public.id, { modelId: model.id, split });
+        const selected = createModelFromMesh(
+          model,
+          split.selected,
+          `${model.name} selected`,
+        );
+        const remaining = createModelFromMesh(
+          model,
+          split.remaining,
+          `${model.name} remaining`,
+        );
+        models.set(selected.id, selected);
+        models.set(remaining.id, remaining);
+        const sourcePackage = sourcePackages.get(model.id);
+        if (sourcePackage) {
+          sourcePackages.set(selected.id, sourcePackage);
+          sourcePackages.set(remaining.id, sourcePackage);
+        }
+        const result: PieceSplitResult = {
+          id: split.public.id,
+          selected: cloneModel(selected),
+          remaining: cloneModel(remaining),
+          selectedValidation: split.public.selectedValidation,
+          remainingValidation: split.public.remainingValidation,
+          capCount: split.public.capCount,
+          selectedFaceCount: split.public.selectedFaceCount,
+          remainingFaceCount: split.public.remainingFaceCount,
+        };
         progress(request.id, 1, "Split ready");
-        splitResult(request.id, split.public);
+        post(
+          { id: request.id, type: "result", result },
+          [
+            ...buffersForMesh(result.selected.mesh),
+            ...buffersForMesh(result.remaining.mesh),
+          ],
+        );
+        return;
+      }
+
+      if (request.type === "export-piece-stl") {
+        const [piece] = resolveExportPieces([request.piece]);
+        const buffer = transferableBuffer(
+          exportPieceStl(piece, request.includeTransforms),
+        );
+        post(
+          {
+            id: request.id,
+            type: "result",
+            result: buffer,
+            fileName: `${downloadBaseName(`${piece.name}-${piece.id.slice(-6)}`)}.stl`,
+            mimeType: "model/stl",
+          },
+          [buffer],
+        );
+        return;
+      }
+
+      if (request.type === "export-pieces-stl-zip") {
+        const pieces = resolveExportPieces(request.pieces);
+        const buffer = transferableBuffer(
+          exportPiecesStlZip(pieces, request.includeTransforms),
+        );
+        post(
+          {
+            id: request.id,
+            type: "result",
+            result: buffer,
+            fileName: "modelcut-pieces.zip",
+            mimeType: "application/zip",
+          },
+          [buffer],
+        );
+        return;
+      }
+
+      if (request.type === "export-pieces-3mf") {
+        const source = models.get(request.modelId);
+        if (!source) throw new Error("The source model is no longer available.");
+        const pieces = resolveExportPieces(request.pieces);
+        const buffer = transferableBuffer(
+          exportPieces3mf(
+            source,
+            pieces,
+            request.includeTransforms,
+            sourcePackages.get(source.id),
+          ),
+        );
+        post(
+          {
+            id: request.id,
+            type: "result",
+            result: buffer,
+            fileName: `${downloadBaseName(source.name)}-pieces.3mf`,
+            mimeType: "model/3mf",
+          },
+          [buffer],
+        );
         return;
       }
 

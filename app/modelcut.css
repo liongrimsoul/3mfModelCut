@@ -265,6 +265,71 @@
   border-radius: 999px;
 }
 
+.modelcut-piece-list {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.modelcut-piece-list button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 42px;
+  padding: 7px 10px;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.modelcut-piece-list button.is-active {
+  background: var(--orange-soft);
+  border-color: var(--orange);
+  box-shadow: inset 3px 0 var(--orange);
+}
+
+.modelcut-piece-list button:disabled {
+  cursor: not-allowed;
+}
+
+.modelcut-piece-list strong {
+  font-size: 11px;
+}
+
+.modelcut-piece-list small {
+  color: var(--muted);
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+.modelcut-piece-transform {
+  margin-top: 12px;
+}
+
+.modelcut-piece-transform .modelcut-number-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 10px;
+}
+
+.modelcut-export-transform {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 10px;
+  color: var(--muted);
+  font-size: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.modelcut-export-transform input {
+  accent-color: var(--orange);
+}
+
 .modelcut-region-list {
   display: grid;
   gap: 8px;
@@ -585,7 +650,9 @@
   z-index: 12;
   display: grid;
   gap: 3px;
-  width: 258px;
+  width: min(300px, calc(100vw - 32px));
+  max-height: min(70vh, 560px);
+  overflow: auto;
   padding: 7px;
   background: var(--paper);
   border: 1px solid var(--line);

@@ -73,6 +73,39 @@ export interface SplitResult {
   remainingFaceCount: number;
 }
 
+export interface PieceTransform {
+  x: number;
+  y: number;
+  z: number;
+}
+
+export interface ModelPiece {
+  id: string;
+  parentId: string | null;
+  model: ModelDocument;
+  homePosition: PieceTransform;
+  position: PieceTransform;
+  validation: ValidationReport | null;
+  capCount: number;
+}
+
+export interface PieceSplitResult {
+  id: string;
+  selected: ModelDocument;
+  remaining: ModelDocument;
+  selectedValidation: ValidationReport;
+  remainingValidation: ValidationReport;
+  capCount: number;
+  selectedFaceCount: number;
+  remainingFaceCount: number;
+}
+
+export interface PieceExportRequest {
+  modelId: string;
+  name: string;
+  position: PieceTransform;
+}
+
 export interface SelectionState {
   mode: SelectionMode;
   ids: number[];
@@ -127,6 +160,27 @@ export type WorkerRequest =
       modelId: string;
       operation: SplitOperation;
     }
+  | {
+      id: string;
+      type: "export-piece-stl";
+      modelId: string;
+      piece: PieceExportRequest;
+      includeTransforms: boolean;
+    }
+  | {
+      id: string;
+      type: "export-pieces-stl-zip";
+      modelId: string;
+      pieces: PieceExportRequest[];
+      includeTransforms: boolean;
+    }
+  | {
+      id: string;
+      type: "export-pieces-3mf";
+      modelId: string;
+      pieces: PieceExportRequest[];
+      includeTransforms: boolean;
+    }
   | { id: string; type: "export-3mf"; modelId: string; splitId: string }
   | { id: string; type: "export-stl-zip"; modelId: string; splitId: string };
 
@@ -140,7 +194,12 @@ export type WorkerResponse =
   | {
       id: string;
       type: "result";
-      result: ModelDocument | SplitResult | ValidationReport | ArrayBuffer;
+      result:
+        | ModelDocument
+        | SplitResult
+        | PieceSplitResult
+        | ValidationReport
+        | ArrayBuffer;
       fileName?: string;
       mimeType?: string;
     }
